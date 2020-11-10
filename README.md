@@ -5,7 +5,7 @@
 digitize : a plot digitizer in R
 ===============
 
-This is a fork of [digitize](https://github.com/tpoisot/digitize), an R package to manually extract data from graphs. It has been modified to streamline extraction of multiple figures with similar structure.
+This is a fork of [digitize](https://github.com/tpoisot/digitize), an R package to manually extract scatter plot data from graphs. It has been modified to automate extraction of line graphs with limited human supervision. It also simplifies extraction of multiple figures with similar structure.
 
 ## Install
 

@@ -280,7 +280,7 @@ digitize <- function(image_filename,
 		#		image_threshold: saturation %
 
 		for (r in c(5,4,3,2))  {
-			for (sat in c(20,30,40)) {
+			for (sat in c(20,30,40,50)) {
 
 		    im <- image_read(image_filename) %>%
 		        image_quantize() %>%
