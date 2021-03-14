@@ -3,6 +3,7 @@
 
 #' (internal) Read image and calibrate
 #' @param fname Filename of the graphic to read
+#' @param twopoints (optional) if true calibrate with two points (SW and NE) instead of four. Defaults to FALSE.
 #' @details internal, use \code{\link{digitize}} instead. Called for side effect of user locating points. See
 #' `graphics::locator` for more. Usage explained at
 #' http://lukemiller.org/index.php/2011/06/digitizing-data-from-old-plots-using-digitize/
@@ -70,6 +71,7 @@ DigitData <- function(col = 'red', type = 'p', ...)
 #' @param x2 X-coordinate of the rightmost x point (corrected)
 #' @param y1 Y-coordinate of the lower y point (corrected)
 #' @param y2 Y-coordinate of the upper y point (corrected)
+#' @param twopoints (optional) if true calibrate with two points (SW and NE) instead of four. Defaults to FALSE.
 #' @details internal, use \code{\link{digitize}} instead. This function corrects the data according to the
 #' calibration information. Usage further explained at
 #' http://lukemiller.org/index.php/2011/06/digitizing-data-from-old-plots-using-digitize/
@@ -94,7 +96,7 @@ Calibrate <- function(data, calpoints, x1, x2, y1, y2, twopoints = F)
 
   data$x <- data$x * cx[2] + cx[1]
   data$y <- data$y * cy[2] + cy[1]
-  
+
   return(as.data.frame(data))
 }
 
@@ -188,8 +190,9 @@ instructCal = function(pt_names, twopoints=F) {
 #' @param x2 (optional) right-most axis point
 #' @param y1 (optional) the lower y-axis point
 #' @param y2 (optional) the upper y-axis point
-#' @param twopoints (optional) if true calibrate with two points instead of four. Defaults to FALSE.
+#' @param twopoints (optional) if true calibrate with two points (SW and NE) instead of four. Defaults to FALSE.
 #' @param auto (optional) if true use automatic digitization. Defaults to FALSE.
+#' @param lines (optional) number of lines to extract. Default = 1. Currently works for 1 or 2 lines.
 #' @param  ... pass parameters col or type to change data calibration points
 #' @details Manual procedure (auto=F) proceeds in two steps, both of which require user input
 #'          from the mouse:
@@ -211,13 +214,19 @@ instructCal = function(pt_names, twopoints=F) {
 #'
 #'            2) Automatically digitize high-contrast data within the plotting region
 #'
-#'          Note: currently auto-digitize does not accommodate multiple lines within plotting region
+#'          For multiple lines (currently works best for red and blue):
+#'
+#'						Runs automated procedure twice for different channels, returns a list of interpolation functions
 #'
 #' @return  data.frame containing the digitized data (auto=F)
 #'
 #'             OR
 #'
-#'          spline function as output from splinefun() (auto=T)
+#'          spline function (auto=T)
+#'
+#'             OR
+#'
+#'          list of spline functions (auto=T, lines=2)
 #' @examples
 #' \dontrun{
 #' tmp <- tempfile()
@@ -240,8 +249,7 @@ digitize <- function(image_filename,
                     y2,
                     twopoints = F,
                     auto = F,
-                    line_1 = F,
-                    line_2 = F) {
+                    lines = 1) {
   if (twopoints) {
     pt_names <- c("x1y1", "x2y2")
     instructCal(pt_names, twopoints = twopoints)
@@ -266,7 +274,7 @@ digitize <- function(image_filename,
     y2 <- getVals('y2')[['y2']]  }
 
   cat("\n\n")
-  
+
   if (auto) {
     # automatically read graph
     cat(
@@ -275,61 +283,75 @@ digitize <- function(image_filename,
       sep = "\n\n"
     )
 
-    # Read in image using `magick` and extract lines with high saturation
     #   more info on magick package: https://www.r-bloggers.com/extracting-the-data-from-static-images-of-graphs-with-magick/
 		#	Scale through the following parameters:
 		#		image_median: radius
 		#		image_threshold: saturation %
-    ch = ""
-		for (r in c(5,4,3,2))  {
-			for (sat in c(30,40,50)) {
-			  if (line_1 == T) {
-			    ch = "lightness" # gets red or zuigao
-			  } else if (line_2 == T) {
-			    ch = "hue" # gets blue or zuidi
-			  } else {
-			    ch = "saturation" # gets single line
-			  }
-			  im <- image_read(image_filename) %>%
-			    image_quantize() %>%
-			    image_median(radius=r) %>%
-			    image_threshold("white", paste0(sat,"%")) %>%
-			    image_channel(ch) %>%
-			    image_negate()
 
-		    # bounds of image we wish to digitize (i.e., within axes)
-		    im.bounds <- Calibrate(cal,
-		                           list(x=c(0,1), y=c(0,1)),
-		                           1, image_info(im)$width, 1, image_info(im)$height,
-		                           twopoints = twopoints)
-		    
-		    data <- image_data(im)[1,,] %>%
-		      as.data.frame() %>%
-		      mutate(Row = 1:nrow(.)) %>%
-		      select(Row, everything()) %>%
-		      mutate_all(as.character) %>%
-		      gather(key = Column, value = value, 2:ncol(.)) %>%
-		      mutate(Column = as.numeric(gsub("V", "", Column)),
-		             x = as.numeric(Row),
-		             value = ifelse(value == "00", NA, 1),
-		             y = max(Column)-Column) %>%  # reverse y-axis to start from bottom-right
-		      filter(!is.na(value)) %>%
-		      filter(x >= min(im.bounds$x), x <= max(im.bounds$x),
-		             y >= min(im.bounds$y), y <= max(im.bounds$y)) %>%
-		      select(x,y)
+		# Manually select bounds of image we wish to digitize (i.e., within axes)
+		im <- image_read(image_filename)
+		im.bounds <- Calibrate(cal,
+													 list(x=c(0,1), y=c(0,1)),
+													 1, image_info(im)$width, 1, image_info(im)$height,
+													 twopoints = twopoints)
 
-				if (nrow(data) > 100) { break }
+    for (l in seq(1,lines)) {
+			if (lines == 2) {
+				# extract two lines
+				if (l == 1) {
+					ch = "hue" # gets blue
+				} else if (l == 2) {
+					ch = "lightness" # gets red
+				}
+			} else if (lines == 1) {
+				ch = "saturation" # gets single line
 			}
-			if (nrow(data) > 100) { break }
+			for (r in c(5,4,3,2))  {
+				for (sat in c(30,40,50)) {
+				  im <- image_read(image_filename) %>%
+				    image_quantize() %>%
+				    image_median(radius=r) %>%
+				    image_threshold("white", paste0(sat,"%")) %>%
+				    image_channel(ch) %>%
+				    image_negate()
+
+			    data <- image_data(im)[1,,] %>%
+			      as.data.frame() %>%
+			      mutate(Row = 1:nrow(.)) %>%
+			      select(Row, everything()) %>%
+			      mutate_all(as.character) %>%
+			      gather(key = Column, value = value, 2:ncol(.)) %>%
+			      mutate(Column = as.numeric(gsub("V", "", Column)),
+			             x = as.numeric(Row),
+			             value = ifelse(value == "00", NA, 1),
+			             y = max(Column)-Column) %>%  # reverse y-axis to start from bottom-right
+			      filter(!is.na(value)) %>%
+			      filter(x >= min(im.bounds$x), x <= max(im.bounds$x),
+			             y >= min(im.bounds$y), y <= max(im.bounds$y)) %>%
+			      select(x,y)
+
+					if (nrow(data) > 100) { break }  # extracted enough data points
+				}
+				if (nrow(data) > 100) { break } # extracted enough data points
+			}
+
+			# restrict domain of function to avoid extrapolation
+			if ((lines == 2) && (l == 2)) {
+				# create array of functions
+				data.line.2 <- Calibrate(data, as.list(im.bounds), x1, x2, y1, y2, twopoints = twopoints)
+		    outfn.2 <- splinefun(data.line.2$x, data.line.2$y, method = "fmm")
+				out <- c(out, function(x){
+			    ifelse(x1 <= x & x <= x2,outfn.2(x),NA)
+			  }	)
+			} else {
+				data.line <- Calibrate(data, as.list(im.bounds), x1, x2, y1, y2, twopoints = twopoints)
+		    outfn <- splinefun(data.line$x, data.line$y, method = "fmm")
+			  out <- function(x){
+			    ifelse(x1 <= x & x <= x2,outfn(x),NA)
+		  	}
+			}
 		}
-    
-    data.line <- Calibrate(data, as.list(im.bounds), x1, x2, y1, y2, twopoints = twopoints)
-    outfn <- splinefun(data.line$x, data.line$y, method = "fmm")
-    
-		# restrict domain of function to avoid extrapolation
-	  out <- function(x){
-	    ifelse(min(data.line$x) <= x & x <= max(data.line$x),outfn(x),NA)
-	  }
+
   } else {
     cat(
       ".....MANUAL INPUT.....",

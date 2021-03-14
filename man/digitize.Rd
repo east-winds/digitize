@@ -4,7 +4,17 @@
 \alias{digitize}
 \title{digitize an image}
 \usage{
-digitize(image_filename, ..., x1, x2, y1, y2, twopoints = F, auto = F)
+digitize(
+  image_filename,
+  ...,
+  x1,
+  x2,
+  y1,
+  y2,
+  twopoints = F,
+  auto = F,
+  lines = 1
+)
 }
 \arguments{
 \item{image_filename}{the image file you wish to digitze}
@@ -19,16 +29,22 @@ digitize(image_filename, ..., x1, x2, y1, y2, twopoints = F, auto = F)
 
 \item{y2}{(optional) the upper y-axis point}
 
-\item{twopoints}{(optional) if true calibrate with two points instead of four. Defaults to FALSE.}
+\item{twopoints}{(optional) if true calibrate with two points (SW and NE) instead of four. Defaults to FALSE.}
 
 \item{auto}{(optional) if true use automatic digitization. Defaults to FALSE.}
+
+\item{lines}{(optional) number of lines to extract. Default = 1. Currently works for 1 or 2 lines.}
 }
 \value{
 data.frame containing the digitized data (auto=F)
 
             OR
 
-         spline function as output from splinefun() (auto=T)
+         spline function (auto=T)
+
+            OR
+
+         list of spline functions (auto=T, lines=2)
 }
 \description{
 digitize an image
@@ -54,7 +70,9 @@ Manual procedure (auto=F) proceeds in two steps, both of which require user inpu
 
            2) Automatically digitize high-contrast data within the plotting region
 
-         Note: currently auto-digitize does not accommodate multiple lines within plotting region
+         For multiple lines (currently works best for red and blue):
+
+					Runs automated procedure twice for different channels, returns a list of interpolation functions
 }
 \examples{
 \dontrun{

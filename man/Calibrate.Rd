@@ -18,6 +18,8 @@ Calibrate(data, calpoints, x1, x2, y1, y2, twopoints = F)
 \item{y1}{Y-coordinate of the lower y point (corrected)}
 
 \item{y2}{Y-coordinate of the upper y point (corrected)}
+
+\item{twopoints}{(optional) if true calibrate with two points (SW and NE) instead of four. Defaults to FALSE.}
 }
 \value{
 `data` A data frame with the corrected coordinates of the points

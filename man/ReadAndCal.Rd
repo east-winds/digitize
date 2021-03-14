@@ -8,6 +8,8 @@ ReadAndCal(fname, twopoints = F)
 }
 \arguments{
 \item{fname}{Filename of the graphic to read}
+
+\item{twopoints}{(optional) if true calibrate with two points (SW and NE) instead of four. Defaults to FALSE.}
 }
 \value{
 `calpoints` List of the x and y coordinates of the calibration points

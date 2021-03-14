@@ -1,23 +1,19 @@
 Package: digitize
-Version: 0.0.4
-Date: 2016-08-26
-Title: Use Data from Published Plots in R
+Version: 0.0.5
+Date: 2021-03-13
+Title: Extract data from plots
 Authors@R: c(
-    person("Timothée", "Poisot", email =  "tim@poisotlab.io", role  = c("aut")),
-    person("Rene", "Sachse", email = "rene.sachse@googlemail.com", role = c("aut")),
-    person("Jaime", "Ashander", email = "jashander@ucdavis.edu", role  = c("aut", "cre")),
-    person("Tal", "Galili",  email = "tal.galili@gmail.com", role  = c("aut"))
+    person("Michael", "Davidson", email =  "mrdavidson@ucsd.edu", role  = c("aut", "cre"))
     )
 Depends:
     R (>= 2.2.0)
-Description: Import data from a digital image; it requires user input for
-    calibration and to locate the data points. The end result is similar to
-    'DataThief' and other other programs that 'digitize' published plots or
-    graphs.
+Description: Import data from a digital image; manual entry requires user input for
+    calibration and to locate the data points. Automated entry (for line graphs only)
+		requires user input for calibration; extracts line data via interpolation functions.
 License: GPL (>= 2)
 Encoding: UTF-8
-URL: https://github.com/tpoisot/digitize/
-BugReports: https://github.com/tpoisot/digitize/issues
+URL: https://github.com/east-winds/digitize/
+BugReports: https://github.com/east-winds/digitize/issues
 Imports:
     graphics,
     readbitmap (>= 0.1-4),
